@@ -1,49 +1,75 @@
 schemaVersion: 2.2.0
 metadata:
-  name: fast-build
+  name: nodejs
   version: 1.0.1
+  displayName: Node.js Runtime
+  description: Stack with Node.js 14
+  tags: ["NodeJS", "Express", "ubi8"]
+  projectType: "nodejs"
+  language: "nodejs"
   attributes:
-    alpha.dockerimage-port: 8081
-  displayName: fast-build
-  description: fast-build 
-  tags:
-    - Docker 
-  projectType: docker
-  language: docker
+    alpha.dockerimage-port: 3001
   provider: Red Hat
   supportUrl: https://github.com/devfile-samples/devfile-support#support-information
-parent:
-  id: fast-build
-  registryUrl: 'https://registry.devfile.io'
 components:
-  - name: image-build
+  - name: outerloop-build
     image:
-      imageName: java-springboot-image:latest
+      imageName: nodejs-image:latest
       dockerfile:
         uri: Dockerfile
         buildContext: .
         rootRequired: false
-  - name: kubernetes-deploy
-    attributes:
-      deployment/replicas: 1
-      deployment/cpuLimit: '100m'
-      deployment/cpuRequest: 10m
-      deployment/memoryLimit: 300Mi
-      deployment/memoryRequest: 180Mi
-      deployment/container-port: 8081
+  - name: outerloop-deploy
     kubernetes:
-      uri: deploy.yaml
+      uri: outerloop-deploy.yaml
+  - name: runtime
+    container:
+      image: registry.access.redhat.com/ubi8/nodejs-14:latest
+      memoryLimit: 1024Mi
+      mountSources: true
+      sourceMapping: /project
       endpoints:
-        - name: http-8081
-          targetPort: 8081
-          path: /
+        - name: http-3000
+          targetPort: 3000
 commands:
+  - id: install
+    exec:
+      component: runtime
+      commandLine: npm install
+      workingDir: /project
+      group:
+        kind: build
+        isDefault: true
+  - id: run
+    exec:
+      component: runtime
+      commandLine: npm start
+      workingDir: /project
+      group:
+        kind: run
+        isDefault: true
+  - id: debug
+    exec:
+      component: runtime
+      commandLine: npm run debug
+      workingDir: /project
+      group:
+        kind: debug
+        isDefault: true
+  - id: test
+    exec:
+      component: runtime
+      commandLine: npm test
+      workingDir: /project
+      group:
+        kind: test
+        isDefault: true
   - id: build-image
     apply:
-      component: image-build
+      component: outerloop-build
   - id: deployk8s
     apply:
-      component: kubernetes-deploy
+      component: outerloop-deploy
   - id: deploy
     composite:
       commands:
